@@ -14,7 +14,7 @@ using namespace std;
 int main(int argc, char const *argv[]){
 
 	/********** PARAMETERS TO CALCULATE OUTPUT *********/
-	int total_commands = 0, l2_commands = 0;
+	int total_commands = 0, l1_commands=0, l2_commands = 0;
 	int l1_miss = 0, l2_miss = 0, time = 0;
 	int* bin_adress = new int[CMD_SIZE]; //binary access adress 
 	int adress; //dec access adress 
@@ -52,8 +52,8 @@ int main(int argc, char const *argv[]){
 
 	/********** INIT NEW CACHE **********/
 
-	Cache l1(l1_cycle, block_size, l1_size, l1_assoc);
-	Cache l2(l2_cycle, block_size, l2_size, l2_assoc);
+	L1Cache l1(l1_cycle, block_size, l1_size, l1_assoc);
+	L2Cache l2(l2_cycle, block_size, l2_size, l2_assoc);
 
 
 	/********** READ FILE WITH COMMANDS **********/
@@ -91,21 +91,83 @@ int main(int argc, char const *argv[]){
 		DecToBinary(adress, bin_adress); //convert adress from dec to bin
 		
 		//**********************************************TODO finish 
-		l1_tag = BinaryToDec(bin_adress, int size)
-		l2_tag = 
-		l1_set = BinaryToDec(bin_adress)
-		l2_set = 
+
+		int offset_bits = log2(block_size / 4);
+		int l1_set_bits = log2(l1_size / (block_size*l1_assoc));
+		int l2_set_bits = log2(l2_size / (block_size*l2_assoc));
+		int l1_offset = BinaryToDec(bin_adress + 2, offset_bits);
+		int l2_offset = BinaryToDec(bin_adress + 2, offset_bits);
+		l1_set = BinaryToDec(bin_adress + 2 + offset_bits, l1_set_bits);
+		l2_set = BinaryToDec(bin_adress + 2 + offset_bits, l2_set_bits);
+		l1_tag = BinaryToDec(bin_adress + 2 + offset_bits + l1_set_bits, CMD_SIZE - l1_set_bits - offset_bits - 2);
+		l2_tag = BinaryToDec(bin_adress + 2 + offset_bits + l2_set_bits, CMD_SIZE - l2_set_bits - offset_bits - 2);
+
+
+		cout << "l1_set " << l1_set << endl;
+		cout << "l2_set " << l2_set << endl;
+		cout << "l1_tag " << l2_set << endl;
+		cout << "l1_tag " << l2_set << endl;
+
 
 		if (!tokens[0].compare("r")) { //read
-			// TODO
+			l1_commands++;
+			time += l1_cycle;
+			if (l1.read(l1_tag, l1_set) == HIT) continue;
+			else //miss l1
+			{
+				l1_miss++;
+				l2_commands++;
+				time += l2_cycle;
+
+				if (l2.read(l2_tag, l2_set) == HIT) {//miss l1 hit l2
+					l2.l2_to_l1(l1, l2_tag, l2_set, l1_tag, l1_set, adress);
+				}
+				else//miss l1 miss l2
+				{
+					l2_miss++;
+					time += mem_cycle;
+					l2.mem_to_l2(l1, l2_tag, l2_set, l1_tag, l1_set, adress);
+				}
+			}
+
 		}
 
 		if (!tokens[0].compare("w")) { //write
-		  // TODO
+			l1_commands++;
+			time += l1_cycle;
+			if (l1.read(l1_tag, l1_set) == HIT) {
+				l1.write(l1_tag, l1_set);
+				continue;
+			}
+			else //miss l1
+			{
+				l1_miss++;
+				l2_commands++;
+				time += l2_cycle;
+
+				if (l2.read(l2_tag, l2_set) == HIT) {//miss l1 hit l2
+					l2.l2_to_l1(l1, l2_tag, l2_set, l1_tag, l1_set, adress);
+					l1.write(l1_tag, l1_set);
+					continue;
+				}
+				else//miss l1 miss l2
+				{
+					l2_miss++;
+					time += mem_cycle;
+					l2.mem_to_l2(l1, l2_tag, l2_set, l1_tag, l1_set, adress);
+					l1.write(l1_tag, l1_set);
+					continue;
+				}
+			}
+
 		}
 
-		
-	
 	}//for 
 
+	 // ======CALCULATE THE OUTPUT =======
+
+	double l1_miss_tot = (round(1000 * (double)l1_miss / l1_commands)) / 1000;
+	double l2_miss_tot = (round(1000 * (double)l2_miss / l2_commands)) / 1000;
+	double time_avg = (round(1000 * (double)time / (l1_commands+l2_commands))) / 1000;
+	printf("L1miss=%.3f L2miss=%.3f AccTimeAvg=%.3f\n", l1_miss_tot, l2_miss_tot, time_avg);
 }

@@ -1,6 +1,6 @@
 #include "cache.H"
 
-
+//===================CACHE FUNCTIONS===================
 Cache::Cache(int _numOfCycles, int _block_size, int _cache_size, int _numOfWays) :
 	num_of_cycles(_numOfCycles), block_size(_block_size), cache_size(_cache_size), num_of_ways(_numOfWays) 
 {
@@ -11,12 +11,20 @@ Cache::Cache(int _numOfCycles, int _block_size, int _cache_size, int _numOfWays)
 		way_arr[i] = new Mem_block[way_size];
 	}
 
-	LRU = new int[num_of_ways];
-	for (int i = 0; i < num_of_ways; i++) {//init LRU
-		LRU[i] = i;
+
+	for (int j = 0; j < way_size; j++) {
+		LRU[j] = new int[num_of_ways];
+		for (int i = 0; i < num_of_ways; i++) {//init LRU
+			LRU[j][i] = i;
+		}
 	}
 
 }
+
+/*Cache::Cache(const Cache& rhs)
+	: num_of_blocks(rhs.num_of_blocks), block_size(rhs.block_size), cache_size(rhs.cache_size),
+	  num_of_ways(rhs.num_of_ways), num_of_cycles(rhs.num_of_cycles), way_size(rhs.way_size),
+	  LRU(cpyLRU(rhs.LRU)), way_arr(cpyWayArr(rhs.way_arr)) {}*/
 
 Cache::~Cache() {
 	delete LRU;
@@ -26,46 +34,175 @@ Cache::~Cache() {
 	delete way_arr;
 }
 
-
-void Cache::LRU_upd(int way) {
-	int x = LRU[way];
-	LRU[way] = num_of_ways - 1;
+void Cache::LRU_upd(int way, int set) {
+	int x = LRU[set][way];
+	LRU[set][way] = num_of_ways - 1;
 	for (int j = 0; j < num_of_ways - 1; j++) {
-		if (j != way && LRU[j] > x) LRU[j]--;
+		if (j != way && LRU[set][j] > x) LRU[set][j]--;
 	}
+}
+
+int Cache::tag_found(int tag, int set) {
+	for (int i = 0; i < num_of_ways; i++) {
+		if (way_arr[i][set].tagcmp(tag)) {
+			return i;
+		}
+
+	}
+	return -1;
+}
+
+int Cache::get_lru_way(int set) {
+	for (int i = 0; i < num_of_ways; i++) {
+		if (LRU[set][i] == 0)
+			return i;
+	}
+	return 0;
 }
 
 Result Cache::read(int tag, int set) {
 	for (int i = 0; i < num_of_ways; i++) {
-		if (!way_arr[i][set].isEmpty && way_arr[i][set].tagcmp(tag) && way_arr[i][set].isValid) { //find matching tag in way_arr 
-			
-			this->LRU_upd(i);
-			return SUCCESS;
+		if (way_arr[i][set].tagcmp(tag) && way_arr[i][set].isValid()==V) {
+			LRU_upd(i, set);
+			return HIT;
 		}
+
 	}
-	return FAILURE; //matching tag is not found
+	return MISS;
 }
 
-Result Cache::write(int tag, int set) {
+void Cache::write(int tag, int set) {
 	for (int i = 0; i < num_of_ways; i++) {
-		if (way_arr[i][set].isEmpty) {
-
-			way_arr[i][set].change_tag(tag);
-			way_arr[i][set].chanage_empty(false);
-			this->LRU_upd(i);
-			return SUCCESS;
-		}
-
-		if (way_arr[i][set].tagcmp(tag) && way_arr[i][set].isValid) { //find matching tag in way_arr 
-			
+		if (way_arr[i][set].tagcmp(tag)) {
 			way_arr[i][set].change_dirty(true);
-			this->LRU_upd(i);
-			return SUCCESS;
+			return;
 		}
 	}
-	return FAILURE; //matching tag is not found
+	return;
 }
 
+
+
+
+//===================L1 FUNCTIONS===================
+L1Cache::L1Cache(int _numOfCycles, int _block_size, int _cache_size, int _numOfWays)
+	: Cache(_numOfCycles, _block_size, _cache_size, _numOfWays) {}
+
+void L1Cache::snoop(int l1_set, int l1_tag) {
+	int way_to_delete = tag_found(l1_tag, l1_set);
+	
+	if (way_to_delete == -1) return;
+
+	if (way_arr[way_to_delete][l1_set].isDirty()) {//dirty need to move to l2
+		//write to l2
+
+	}
+
+
+	way_arr[way_to_delete][l1_set].change_valid(I);
+	return;
+}
+
+
+
+
+
+
+//===================L2 FUNCTIONS===================
+L2Cache::L2Cache(int _numOfCycles, int _block_size, int _cache_size, int _numOfWays)
+	: Cache(_numOfCycles, _block_size, _cache_size, _numOfWays) {}
+
+
+void L2Cache::l2_to_l1(L1Cache& l1, int l2_tag, int l2_set, int l1_tag, int l1_set, int _adress) {
+	Mem_block** l1way_arr = l1.get_way_arr();
+	int way_LRU = l1.get_lru_way(l1_set);
+	int l1_num_of_ways = l1.get_num_of_ways();
+
+	for (int i = 0; i < l1_num_of_ways; i++) {
+		if (l1way_arr[i][l1_set].tagcmp(-1)|| l1way_arr[i][l1_set].isValid()==I) { //Empty new place in L1 or something is invalid
+			l1way_arr[i][l1_set].change_tag(l1_tag);
+			l1way_arr[i][l1_set].change_valid(V);
+			l1way_arr[i][l1_set].change_adress(_adress);
+			l1.LRU_upd(i, l1_set);
+			return;
+		}
+	}
+
+
+
+	if (l1way_arr[way_LRU][l1_set].isDirty()) {//l1 dirty WB.
+
+
+		/*Calculate l2_set and l2_tag according to adress in l1*/
+		int adr = l1way_arr[way_LRU][l1_set].getAdress();
+		int* bin_adress = new int[CMD_SIZE];
+		DecToBinary(adr, bin_adress);
+		int offset_bits = log2(block_size / 4);
+		int l2_set_bits = log2(cache_size / (block_size*num_of_ways));
+
+		int del_l2_set = BinaryToDec(bin_adress + 2 + offset_bits, l2_set_bits);
+		int del_l2_tag = BinaryToDec(bin_adress + 2 + offset_bits + l2_set_bits, CMD_SIZE - l2_set_bits - offset_bits - 2);
+
+
+		for (int i = 0; i < num_of_ways; i++) {
+			if (way_arr[i][del_l2_set].tagcmp(del_l2_tag)) {
+				way_arr[i][del_l2_set].change_dirty(true);
+				LRU_upd(i, del_l2_set);
+			}
+		}
+
+		delete bin_adress;
+	}
+
+	l1way_arr[way_LRU][l1_set].change_tag(l1_tag);
+	l1way_arr[way_LRU][l1_set].change_valid(V);
+	l1way_arr[way_LRU][l1_set].change_adress(_adress);
+	l1.LRU_upd(way_LRU, l1_set);
+
+	return;
+}
+
+
+void L2Cache::mem_to_l2(L1Cache& l1, int l2_tag, int l2_set, int l1_tag, int l1_set, int adr){
+	int l2_way_to_del = get_lru_way(l2_set);
+	Mem_block** l2_mem_arr = get_way_arr();
+	int l2_tag_to_del = l2_mem_arr[l2_way_to_del][l2_set].getTag();
+
+	for (int i = 0; i < num_of_ways; i++) {
+		if (way_arr[i][l2_set].isValid() == I || way_arr[i][l1_set].tagcmp(-1)) { //there is a free space
+			way_arr[i][l2_set].change_tag(l2_tag);
+			way_arr[i][l2_set].change_valid(V);
+			way_arr[i][l2_set].change_adress(adr);
+			LRU_upd(i, l2_set);
+			l2_to_l1(l1, l2_tag, l2_set, l1_tag, l1_set, adr);
+			return;
+		}
+
+	}
+
+	//no free space in l2
+	int* bin_adress = new int[CMD_SIZE];
+	DecToBinary(l2_mem_arr[l2_way_to_del][l2_set].getAdress(), bin_adress);
+	int offset_bits = log2(l1.get_block_size() / 4);
+	int l1_set_bits = log2(l1.get_cache_size() / (l1.get_block_size()*l1.get_num_of_ways()));
+
+	int del_l1_set = BinaryToDec(bin_adress + 2 + offset_bits, l1_set_bits);
+	int del_l1_tag = BinaryToDec(bin_adress + 2 + offset_bits + l1_set_bits, CMD_SIZE - l1_set_bits - offset_bits - 2);
+	
+	l1.snoop(del_l1_set, del_l1_tag);
+
+	if (way_arr[l2_way_to_del][l2_set].isDirty()) {//write to mem
+		//write l2 to mem
+		way_arr[l2_way_to_del][l2_set].change_dirty(false);
+		LRU_upd(l2_way_to_del, l2_set);
+	}
+
+	way_arr[l2_way_to_del][l2_set].change_tag(l2_tag);
+	way_arr[l2_way_to_del][l2_set].change_adress(adr);
+	way_arr[l2_way_to_del][l2_set].change_valid(V);
+	delete bin_adress;
+
+}
 
 
 
