@@ -57,13 +57,7 @@ protected:
 	adress = _adress;
 }*/
 
-Mem_block::Mem_block() :
-	tag(-1) {
-	dirty = false;
-	valid = V;
-	empty = false;
-	adress = -1;
-}
+
 
 
 
@@ -130,12 +124,13 @@ protected:
 	}*/
 
 };
+class  L2Cache;
 
 class  L1Cache : public Cache
 {
 public:
 	L1Cache(int _numOfCycles, int _block_size, int _cache_size, int _numOfWays);
-	void snoop(int l1_set, int l1_tag);
+	void snoop(L2Cache *l2, int l1_set, int l1_tag);
 private:
 
 };

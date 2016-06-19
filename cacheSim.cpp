@@ -6,7 +6,7 @@
 #include<fstream>
 #include<math.h>
 
-#include "cache.H"
+#include "cache.h"
 
 using std::string;
 using namespace std;
@@ -103,24 +103,27 @@ int main(int argc, char const *argv[]){
 		l2_tag = BinaryToDec(bin_adress + 2 + offset_bits + l2_set_bits, CMD_SIZE - l2_set_bits - offset_bits - 2);
 
 
-		cout << "l1_set " << l1_set << endl;
+		/*cout << "l1_set " << l1_set << endl;
 		cout << "l2_set " << l2_set << endl;
 		cout << "l1_tag " << l2_set << endl;
-		cout << "l1_tag " << l2_set << endl;
+		cout << "l1_tag " << l2_set << endl;*/
 
 
 		if (!tokens[0].compare("r")) { //read
 			l1_commands++;
-			time += l1_cycle;
-			if (l1.read(l1_tag, l1_set) == HIT) continue;
+			if (l1.read(l1_tag, l1_set) == HIT) {
+				time += l1_cycle;
+				continue;
+			}
 			else //miss l1
 			{
 				l1_miss++;
 				l2_commands++;
-				time += l2_cycle;
+
 
 				if (l2.read(l2_tag, l2_set) == HIT) {//miss l1 hit l2
 					l2.l2_to_l1(l1, l2_tag, l2_set, l1_tag, l1_set, adress);
+					time += l2_cycle;
 				}
 				else//miss l1 miss l2
 				{
@@ -134,20 +137,21 @@ int main(int argc, char const *argv[]){
 
 		if (!tokens[0].compare("w")) { //write
 			l1_commands++;
-			time += l1_cycle;
 			if (l1.read(l1_tag, l1_set) == HIT) {
 				l1.write(l1_tag, l1_set);
+				time += l1_cycle;
 				continue;
 			}
 			else //miss l1
 			{
 				l1_miss++;
 				l2_commands++;
-				time += l2_cycle;
+
 
 				if (l2.read(l2_tag, l2_set) == HIT) {//miss l1 hit l2
 					l2.l2_to_l1(l1, l2_tag, l2_set, l1_tag, l1_set, adress);
 					l1.write(l1_tag, l1_set);
+					time += l2_cycle;
 					continue;
 				}
 				else//miss l1 miss l2
@@ -168,6 +172,8 @@ int main(int argc, char const *argv[]){
 
 	double l1_miss_tot = (round(1000 * (double)l1_miss / l1_commands)) / 1000;
 	double l2_miss_tot = (round(1000 * (double)l2_miss / l2_commands)) / 1000;
-	double time_avg = (round(1000 * (double)time / (l1_commands+l2_commands))) / 1000;
+	double time_avg = (round(1000 * (double)time / total_commands)) / 1000;
 	printf("L1miss=%.3f L2miss=%.3f AccTimeAvg=%.3f\n", l1_miss_tot, l2_miss_tot, time_avg);
+	cout << time << endl;
+	cout << total_commands << endl;
 }

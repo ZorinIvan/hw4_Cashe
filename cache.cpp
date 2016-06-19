@@ -1,4 +1,12 @@
-#include "cache.H"
+#include "cache.h"
+
+Mem_block::Mem_block() :
+	tag(-1) {
+	dirty = false;
+	valid = I;
+	empty = false;
+	adress = -1;
+}
 
 //===================CACHE FUNCTIONS===================
 Cache::Cache(int _numOfCycles, int _block_size, int _cache_size, int _numOfWays) :
@@ -7,11 +15,12 @@ Cache::Cache(int _numOfCycles, int _block_size, int _cache_size, int _numOfWays)
 	num_of_blocks = cache_size / block_size;
 	way_size = num_of_blocks / num_of_ways;
 
+	way_arr = new Mem_block*[num_of_ways];
 	for (int i = 0; i < num_of_ways; i++) {
 		way_arr[i] = new Mem_block[way_size];
 	}
 
-
+	LRU = new int* [way_size];
 	for (int j = 0; j < way_size; j++) {
 		LRU[j] = new int[num_of_ways];
 		for (int i = 0; i < num_of_ways; i++) {//init LRU
@@ -88,15 +97,36 @@ void Cache::write(int tag, int set) {
 L1Cache::L1Cache(int _numOfCycles, int _block_size, int _cache_size, int _numOfWays)
 	: Cache(_numOfCycles, _block_size, _cache_size, _numOfWays) {}
 
-void L1Cache::snoop(int l1_set, int l1_tag) {
+void L1Cache::snoop(L2Cache* l2, int l1_set, int l1_tag) {
 	int way_to_delete = tag_found(l1_tag, l1_set);
 	
 	if (way_to_delete == -1) return;
 
 	if (way_arr[way_to_delete][l1_set].isDirty()) {//dirty need to move to l2
-		//write to l2
 
-	}
+			
+		   /*Calculate l2_set and l2_tag according to adress in l1*/
+		
+			Mem_block** l2_way = l2->get_way_arr();									
+			int adr = way_arr[way_to_delete][l1_set].getAdress();
+			int* bin_adress = new int[CMD_SIZE];
+			DecToBinary(adr, bin_adress);
+			int offset_bits = log2(l2->get_block_size()/ 4);
+			int l2_set_bits = log2(l2->get_cache_size() / (l2->get_block_size()*l2->get_num_of_ways()));
+
+			int del_l2_set = BinaryToDec(bin_adress + 2 + offset_bits, l2_set_bits);
+			int del_l2_tag = BinaryToDec(bin_adress + 2 + offset_bits + l2_set_bits, CMD_SIZE - l2_set_bits - offset_bits - 2);
+
+
+			for (int i = 0; i < l2->get_num_of_ways(); i++) {
+				if (l2_way[i][del_l2_set].tagcmp(del_l2_tag)) {
+					l2_way[i][del_l2_set].change_dirty(true);
+					l2->LRU_upd(i, del_l2_set);
+				}
+			}
+
+			delete bin_adress;
+		}
 
 
 	way_arr[way_to_delete][l1_set].change_valid(I);
@@ -119,7 +149,7 @@ void L2Cache::l2_to_l1(L1Cache& l1, int l2_tag, int l2_set, int l1_tag, int l1_s
 	int l1_num_of_ways = l1.get_num_of_ways();
 
 	for (int i = 0; i < l1_num_of_ways; i++) {
-		if (l1way_arr[i][l1_set].tagcmp(-1)|| l1way_arr[i][l1_set].isValid()==I) { //Empty new place in L1 or something is invalid
+		if (l1way_arr[i][l1_set].tagcmp(-1) || l1way_arr[i][l1_set].isValid()==I) { //Empty new place in L1 or something is invalid
 			l1way_arr[i][l1_set].change_tag(l1_tag);
 			l1way_arr[i][l1_set].change_valid(V);
 			l1way_arr[i][l1_set].change_adress(_adress);
@@ -189,14 +219,14 @@ void L2Cache::mem_to_l2(L1Cache& l1, int l2_tag, int l2_set, int l1_tag, int l1_
 	int del_l1_set = BinaryToDec(bin_adress + 2 + offset_bits, l1_set_bits);
 	int del_l1_tag = BinaryToDec(bin_adress + 2 + offset_bits + l1_set_bits, CMD_SIZE - l1_set_bits - offset_bits - 2);
 	
-	l1.snoop(del_l1_set, del_l1_tag);
+	l1.snoop(this, del_l1_set, del_l1_tag);
 
 	if (way_arr[l2_way_to_del][l2_set].isDirty()) {//write to mem
 		//write l2 to mem
 		way_arr[l2_way_to_del][l2_set].change_dirty(false);
-		LRU_upd(l2_way_to_del, l2_set);
 	}
 
+	LRU_upd(l2_way_to_del, l2_set);
 	way_arr[l2_way_to_del][l2_set].change_tag(l2_tag);
 	way_arr[l2_way_to_del][l2_set].change_adress(adr);
 	way_arr[l2_way_to_del][l2_set].change_valid(V);
