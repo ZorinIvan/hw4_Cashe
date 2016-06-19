@@ -31,7 +31,7 @@ int main(int argc, char const *argv[]){
 	/********** INIT INPUT PARAMETERS **********/
 
 	int mem_cycle = strtol(argv[3],NULL,0);
-	int block_size = strtol(argv[5], NULL, 0);
+	int block_size =pow(2, strtol(argv[5], NULL, 0));
 	int l1_size = pow(2, strtol(argv[7], NULL, 0));
 	int l1_assoc = pow(2,strtol(argv[9], NULL, 0));
 	int l1_cycle = strtol(argv[11], NULL, 0);
@@ -107,13 +107,15 @@ int main(int argc, char const *argv[]){
 		cout << "l2_set " << l2_set << endl;
 		cout << "l1_tag " << l2_set << endl;
 		cout << "l1_tag " << l2_set << endl;*/
-
+		if (total_commands == 12) {
+			int i = 0;
+		}
 
 		if (!tokens[0].compare("r")) { //read
 			l1_commands++;
 			if (l1.read(l1_tag, l1_set) == HIT) {
 				time += l1_cycle;
-				continue;
+			//	continue;
 			}
 			else //miss l1
 			{
@@ -140,7 +142,7 @@ int main(int argc, char const *argv[]){
 			if (l1.read(l1_tag, l1_set) == HIT) {
 				l1.write(l1_tag, l1_set);
 				time += l1_cycle;
-				continue;
+				//continue;
 			}
 			else //miss l1
 			{
@@ -152,7 +154,7 @@ int main(int argc, char const *argv[]){
 					l2.l2_to_l1(l1, l2_tag, l2_set, l1_tag, l1_set, adress);
 					l1.write(l1_tag, l1_set);
 					time += l2_cycle;
-					continue;
+					//continue;
 				}
 				else//miss l1 miss l2
 				{
@@ -160,20 +162,19 @@ int main(int argc, char const *argv[]){
 					time += mem_cycle;
 					l2.mem_to_l2(l1, l2_tag, l2_set, l1_tag, l1_set, adress);
 					l1.write(l1_tag, l1_set);
-					continue;
+					//continue;
 				}
 			}
 
 		}
+		double l1_miss_tot = (round(1000 * (double)l1_miss / l1_commands)) / 1000;
+		double l2_miss_tot = (round(1000 * (double)l2_miss / l2_commands)) / 1000;
+		double time_avg = (round(1000 * (double)time / total_commands)) / 1000;
+		printf("L1miss=%.3f L2miss=%.3f AccTimeAvg=%.3f\n", l1_miss_tot, l2_miss_tot, time_avg);
+		cout << total_commands << endl;
 
 	}//for 
 
 	 // ======CALCULATE THE OUTPUT =======
 
-	double l1_miss_tot = (round(1000 * (double)l1_miss / l1_commands)) / 1000;
-	double l2_miss_tot = (round(1000 * (double)l2_miss / l2_commands)) / 1000;
-	double time_avg = (round(1000 * (double)time / total_commands)) / 1000;
-	printf("L1miss=%.3f L2miss=%.3f AccTimeAvg=%.3f\n", l1_miss_tot, l2_miss_tot, time_avg);
-	cout << time << endl;
-	cout << total_commands << endl;
 }

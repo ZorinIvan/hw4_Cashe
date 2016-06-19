@@ -227,6 +227,7 @@ void L2Cache::mem_to_l2(L1Cache& l1, int l2_tag, int l2_set, int l1_tag, int l1_
 	}
 
 	LRU_upd(l2_way_to_del, l2_set);
+	l2_to_l1(l1, l2_tag, l2_set, l1_tag, l1_set, adr);/////////////
 	way_arr[l2_way_to_del][l2_set].change_tag(l2_tag);
 	way_arr[l2_way_to_del][l2_set].change_adress(adr);
 	way_arr[l2_way_to_del][l2_set].change_valid(V);
