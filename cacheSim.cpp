@@ -4,9 +4,9 @@
 #include<string>
 #include<sstream>
 #include<fstream>
-#include<math.h>
+#include<cmath>
 
-#include "cache.h"
+#include "cache.H"
 
 using std::string;
 using namespace std;
@@ -49,6 +49,10 @@ int main(int argc, char const *argv[]){
 	cout << " l2_cycle " << l2_cycle << endl;
 	*/
 
+  if(l1_size>l2_size){
+    cerr<< "Error. L1 large than L2" << endl;
+    exit(-1);
+  }
 
 	/********** INIT NEW CACHE **********/
 
@@ -87,7 +91,7 @@ int main(int argc, char const *argv[]){
 
 		total_commands++;
 
-		adress = stoi(tokens[1], nullptr, 16); //convert adress from string to dec
+		adress = stoi(tokens[1], NULL, 16); //convert adress from string to dec
 		DecToBinary(adress, bin_adress); //convert adress from dec to bin
 		
 		//**********************************************TODO finish 
@@ -95,8 +99,8 @@ int main(int argc, char const *argv[]){
 		int offset_bits = log2(block_size / 4);
 		int l1_set_bits = log2(l1_size / (block_size*l1_assoc));
 		int l2_set_bits = log2(l2_size / (block_size*l2_assoc));
-		int l1_offset = BinaryToDec(bin_adress + 2, offset_bits);
-		int l2_offset = BinaryToDec(bin_adress + 2, offset_bits);
+	//	int l1_offset = BinaryToDec(bin_adress + 2, offset_bits);
+	//	int l2_offset = BinaryToDec(bin_adress + 2, offset_bits);
 		l1_set = BinaryToDec(bin_adress + 2 + offset_bits, l1_set_bits);
 		l2_set = BinaryToDec(bin_adress + 2 + offset_bits, l2_set_bits);
 		l1_tag = BinaryToDec(bin_adress + 2 + offset_bits + l1_set_bits, CMD_SIZE - l1_set_bits - offset_bits - 2);
@@ -107,9 +111,6 @@ int main(int argc, char const *argv[]){
 		cout << "l2_set " << l2_set << endl;
 		cout << "l1_tag " << l2_set << endl;
 		cout << "l1_tag " << l2_set << endl;*/
-		if (total_commands == 7) {
-			int i = 0;
-		}
 
 		if (!tokens[0].compare("r")) { //read
 			l1_commands++;

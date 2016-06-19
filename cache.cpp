@@ -1,4 +1,4 @@
-#include "cache.h"
+#include "cache.H"
 
 Mem_block::Mem_block() :
 	tag(-1) {
@@ -199,7 +199,7 @@ void L2Cache::l2_to_l1(L1Cache& l1, int l2_tag, int l2_set, int l1_tag, int l1_s
 void L2Cache::mem_to_l2(L1Cache& l1, int l2_tag, int l2_set, int l1_tag, int l1_set, int adr) {
 	int l2_way_to_del = get_lru_way(l2_set);
 	Mem_block** l2_mem_arr = get_way_arr();
-	int l2_tag_to_del = l2_mem_arr[l2_way_to_del][l2_set].getTag();
+	//int l2_tag_to_del = l2_mem_arr[l2_way_to_del][l2_set].getTag();
 
 	for (int i = 0; i < num_of_ways; i++) {
 		if (way_arr[i][l2_set].isValid() == I || way_arr[i][l1_set].tagcmp(-1)) { //there is a free space

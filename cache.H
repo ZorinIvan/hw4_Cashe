@@ -1,6 +1,7 @@
 #ifndef CACHE_H
 #define CACHE_H
 
+#include<cmath>
 #include<stdio.h>
 #include<iostream>
 #include<stdlib.h>
