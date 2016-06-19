@@ -107,7 +107,7 @@ int main(int argc, char const *argv[]){
 		cout << "l2_set " << l2_set << endl;
 		cout << "l1_tag " << l2_set << endl;
 		cout << "l1_tag " << l2_set << endl;*/
-		if (total_commands == 12) {
+		if (total_commands == 7) {
 			int i = 0;
 		}
 
@@ -167,14 +167,14 @@ int main(int argc, char const *argv[]){
 			}
 
 		}
-		double l1_miss_tot = (round(1000 * (double)l1_miss / l1_commands)) / 1000;
-		double l2_miss_tot = (round(1000 * (double)l2_miss / l2_commands)) / 1000;
-		double time_avg = (round(1000 * (double)time / total_commands)) / 1000;
-		printf("L1miss=%.3f L2miss=%.3f AccTimeAvg=%.3f\n", l1_miss_tot, l2_miss_tot, time_avg);
-		cout << total_commands << endl;
+
 
 	}//for 
 
 	 // ======CALCULATE THE OUTPUT =======
-
+	double l1_miss_tot = (round(1000 * (double)l1_miss / l1_commands)) / 1000;
+	double l2_miss_tot = (round(1000 * (double)l2_miss / l2_commands)) / 1000;
+	double time_avg = (round(1000 * (double)time / total_commands)) / 1000;
+	printf("L1miss=%.3f L2miss=%.3f AccTimeAvg=%.3f\n", l1_miss_tot, l2_miss_tot, time_avg);
+	//cout << total_commands << endl;
 }
